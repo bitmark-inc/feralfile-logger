@@ -46,7 +46,7 @@ func New(level string, isDebug bool) (*zap.Logger, error) {
 	return config.Build()
 }
 
-func mustDefaultLogger() *zap.Logger {
+func MustDefaultLogger() *zap.Logger {
 	if defaultLogger == nil {
 		panic("use indexer logger without initializing")
 	}
@@ -55,33 +55,33 @@ func mustDefaultLogger() *zap.Logger {
 }
 
 func Debug(msg string, fields ...zap.Field) {
-	mustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Debug(msg, fields...)
+	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Debug(msg, fields...)
 }
 
 func Info(msg string, fields ...zap.Field) {
-	mustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Info(msg, fields...)
+	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Info(msg, fields...)
 }
 
 func Warn(msg string, fields ...zap.Field) {
-	mustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Warn(msg, fields...)
+	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Warn(msg, fields...)
 }
 
 func Error(msg string, fields ...zap.Field) {
-	mustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
+	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
 }
 
 func Panic(msg string, fields ...zap.Field) {
-	mustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Panic(msg, fields...)
+	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Panic(msg, fields...)
 }
 
 func Fatal(msg string, fields ...zap.Field) {
-	mustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Fatal(msg, fields...)
+	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Fatal(msg, fields...)
 }
 
 func DefaultLogger() *zap.Logger {
-	return mustDefaultLogger()
+	return MustDefaultLogger()
 }
 
 func Sugar() *zap.SugaredLogger {
-	return mustDefaultLogger().Sugar()
+	return MustDefaultLogger().Sugar()
 }
