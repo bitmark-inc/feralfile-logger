@@ -10,7 +10,7 @@ import (
 
 var defaultLogger *zap.Logger
 
-func Initialize(level string, isDebug bool, sentryDsn string) error {
+func Initialize(level string, isDebug bool, sentryOptions *sentry.ClientOptions) error {
 	log, err := New(level, isDebug)
 	if err != nil {
 		return err
@@ -19,10 +19,8 @@ func Initialize(level string, isDebug bool, sentryDsn string) error {
 	defaultLogger = log
 
 	// Init sentry
-	if sentryDsn != "" {
-		err := sentry.Init(sentry.ClientOptions{
-			Dsn: sentryDsn,
-		})
+	if sentryOptions != nil {
+		err := sentry.Init(*sentryOptions)
 		if err != nil {
 			return err
 		}
