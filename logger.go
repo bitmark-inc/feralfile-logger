@@ -3,19 +3,29 @@ package log
 import (
 	"strings"
 
+	"github.com/getsentry/sentry-go"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 var defaultLogger *zap.Logger
 
-func Initialize(level string, isDebug bool) error {
+func Initialize(level string, isDebug bool, sentryOptions *sentry.ClientOptions) error {
 	log, err := New(level, isDebug)
 	if err != nil {
 		return err
 	}
 
 	defaultLogger = log
+
+	// Init sentry
+	if sentryOptions != nil {
+		err := sentry.Init(*sentryOptions)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -60,14 +70,38 @@ func Debug(msg string, fields ...zap.Field) {
 
 func Info(msg string, fields ...zap.Field) {
 	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Info(msg, fields...)
+
+	// Add a breadcrumb
+	sentry.AddBreadcrumb(&sentry.Breadcrumb{
+		Message: msg,
+		Level:   sentry.LevelInfo,
+		Data:    zapFieldsToMap(fields),
+	})
 }
 
 func Warn(msg string, fields ...zap.Field) {
 	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Warn(msg, fields...)
+
+	// Add a breadcrumb
+	sentry.AddBreadcrumb(&sentry.Breadcrumb{
+		Message: msg,
+		Level:   sentry.LevelWarning,
+		Data:    zapFieldsToMap(fields),
+	})
 }
 
 func Error(msg string, fields ...zap.Field) {
 	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
+
+	// Add a breadcrumb
+	sentry.AddBreadcrumb(&sentry.Breadcrumb{
+		Message: msg,
+		Level:   sentry.LevelError,
+		Data:    zapFieldsToMap(fields),
+	})
+
+	// Capture the error with Sentry
+	sentry.CaptureMessage(msg)
 }
 
 func Panic(msg string, fields ...zap.Field) {
@@ -84,4 +118,20 @@ func DefaultLogger() *zap.Logger {
 
 func Sugar() *zap.SugaredLogger {
 	return MustDefaultLogger().Sugar()
+}
+
+// Convert zap fields to a map that Sentry can understand
+func zapFieldsToMap(fields []zap.Field) map[string]interface{} {
+	data := make(map[string]interface{})
+	for _, field := range fields {
+		var value interface{}
+		encoder := zapcore.NewMapObjectEncoder()
+		field.AddTo(encoder)
+		for _, v := range encoder.Fields {
+			value = v
+		}
+
+		data[field.Key] = value
+	}
+	return data
 }
