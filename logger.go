@@ -92,7 +92,6 @@ func Warn(msg string, fields ...zap.Field) {
 
 func Error(msg string, fields ...zap.Field) {
 	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
-
 	// Add a breadcrumb
 	sentry.AddBreadcrumb(&sentry.Breadcrumb{
 		Message: msg,
@@ -118,6 +117,10 @@ func DefaultLogger() *zap.Logger {
 
 func Sugar() *zap.SugaredLogger {
 	return MustDefaultLogger().Sugar()
+}
+
+func Sync() error {
+	return MustDefaultLogger().Sync()
 }
 
 // Convert zap fields to a map that Sentry can understand
