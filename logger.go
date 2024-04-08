@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"strings"
 
 	"github.com/getsentry/sentry-go"
@@ -56,71 +57,94 @@ func New(level string, isDebug bool) (*zap.Logger, error) {
 	return config.Build()
 }
 
-func MustDefaultLogger() *zap.Logger {
-	if defaultLogger == nil {
-		panic("use indexer logger without initializing")
-	}
-
-	return defaultLogger
+func SetSentryHubOnContext(ctx context.Context) context.Context {
+	hub := sentry.CurrentHub().Clone()
+	return sentry.SetHubOnContext(ctx, hub)
 }
 
 func Debug(msg string, fields ...zap.Field) {
-	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Debug(msg, fields...)
+	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Debug(msg, fields...)
 }
 
 func Info(msg string, fields ...zap.Field) {
-	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Info(msg, fields...)
+	info(msg, sentry.CurrentHub(), fields...)
+}
+
+func InfoWithContext(ctx context.Context, msg string, fields ...zap.Field) {
+	info(msg, sentry.GetHubFromContext(ctx), fields...)
+}
+
+func info(msg string, hub *sentry.Hub, fields ...zap.Field) {
+	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Info(msg, fields...)
 
 	// Add a breadcrumb
-	sentry.AddBreadcrumb(&sentry.Breadcrumb{
+	hub.AddBreadcrumb(&sentry.Breadcrumb{
 		Message: msg,
 		Level:   sentry.LevelInfo,
 		Data:    zapFieldsToMap(fields),
-	})
+	}, nil)
 }
 
 func Warn(msg string, fields ...zap.Field) {
-	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Warn(msg, fields...)
+	warn(msg, sentry.CurrentHub(), fields...)
+}
+
+func WarnWithContext(ctx context.Context, msg string, fields ...zap.Field) {
+	warn(msg, sentry.GetHubFromContext(ctx), fields...)
+}
+
+func warn(msg string, hub *sentry.Hub, fields ...zap.Field) {
+	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Warn(msg, fields...)
 
 	// Add a breadcrumb
-	sentry.AddBreadcrumb(&sentry.Breadcrumb{
+	hub.AddBreadcrumb(&sentry.Breadcrumb{
 		Message: msg,
 		Level:   sentry.LevelWarning,
 		Data:    zapFieldsToMap(fields),
-	})
+	}, nil)
 }
 
 func Error(msg string, fields ...zap.Field) {
-	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
+	error(msg, sentry.CurrentHub(), fields...)
+}
+
+func ErrorWithContext(ctx context.Context, msg string, fields ...zap.Field) {
+	error(msg, sentry.GetHubFromContext(ctx), fields...)
+}
+
+func error(msg string, hub *sentry.Hub, fields ...zap.Field) {
+	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
+
 	// Add a breadcrumb
-	sentry.AddBreadcrumb(&sentry.Breadcrumb{
+	hub.AddBreadcrumb(&sentry.Breadcrumb{
 		Message: msg,
 		Level:   sentry.LevelError,
 		Data:    zapFieldsToMap(fields),
-	})
-
-	// Capture the error with Sentry
-	sentry.CaptureMessage(msg)
+	}, nil)
 }
 
 func Panic(msg string, fields ...zap.Field) {
-	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Panic(msg, fields...)
+	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Panic(msg, fields...)
 }
 
 func Fatal(msg string, fields ...zap.Field) {
-	MustDefaultLogger().WithOptions(zap.AddCallerSkip(1)).Fatal(msg, fields...)
-}
-
-func DefaultLogger() *zap.Logger {
-	return MustDefaultLogger()
+	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Fatal(msg, fields...)
 }
 
 func Sugar() *zap.SugaredLogger {
-	return MustDefaultLogger().Sugar()
+	return DefaultLogger().Sugar()
 }
 
 func Sync() error {
-	return MustDefaultLogger().Sync()
+	return DefaultLogger().Sync()
+}
+
+func DefaultLogger() *zap.Logger {
+	if defaultLogger == nil {
+		panic("use logger without initializing")
+	}
+
+	return defaultLogger
 }
 
 // Convert zap fields to a map that Sentry can understand
