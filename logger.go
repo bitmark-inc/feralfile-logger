@@ -78,11 +78,11 @@ func info(msg string, hub *sentry.Hub, fields ...zap.Field) {
 	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Info(msg, fields...)
 
 	// Add a breadcrumb
-	hub.AddBreadcrumb(&sentry.Breadcrumb{
+	addBreadcrumb(hub, &sentry.Breadcrumb{
 		Message: msg,
 		Level:   sentry.LevelInfo,
 		Data:    zapFieldsToMap(fields),
-	}, nil)
+	})
 }
 
 func Warn(msg string, fields ...zap.Field) {
@@ -97,30 +97,38 @@ func warn(msg string, hub *sentry.Hub, fields ...zap.Field) {
 	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Warn(msg, fields...)
 
 	// Add a breadcrumb
-	hub.AddBreadcrumb(&sentry.Breadcrumb{
+	addBreadcrumb(hub, &sentry.Breadcrumb{
 		Message: msg,
 		Level:   sentry.LevelWarning,
 		Data:    zapFieldsToMap(fields),
-	}, nil)
+	})
 }
 
 func Error(msg string, fields ...zap.Field) {
-	error(msg, sentry.CurrentHub(), fields...)
+	err(msg, sentry.CurrentHub(), fields...)
 }
 
 func ErrorWithContext(ctx context.Context, msg string, fields ...zap.Field) {
-	error(msg, sentry.GetHubFromContext(ctx), fields...)
+	err(msg, sentry.GetHubFromContext(ctx), fields...)
 }
 
-func error(msg string, hub *sentry.Hub, fields ...zap.Field) {
+func err(msg string, hub *sentry.Hub, fields ...zap.Field) {
 	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
 
 	// Add a breadcrumb
-	hub.AddBreadcrumb(&sentry.Breadcrumb{
+	addBreadcrumb(hub, &sentry.Breadcrumb{
 		Message: msg,
 		Level:   sentry.LevelError,
 		Data:    zapFieldsToMap(fields),
-	}, nil)
+	})
+}
+
+func addBreadcrumb(hub *sentry.Hub, breadcrumb *sentry.Breadcrumb) {
+	if nil != hub {
+		hub.AddBreadcrumb(breadcrumb, nil)
+	} else {
+		sentry.AddBreadcrumb(breadcrumb)
+	}
 }
 
 func Panic(msg string, fields ...zap.Field) {
