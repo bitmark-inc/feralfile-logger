@@ -12,7 +12,7 @@ import (
 var defaultLogger *zap.Logger
 
 func Initialize(level string, isDebug bool, sentryOptions *sentry.ClientOptions) error {
-	log, err := New(level, isDebug)
+	log, err := newLogger(level, isDebug)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func Initialize(level string, isDebug bool, sentryOptions *sentry.ClientOptions)
 	return nil
 }
 
-func New(level string, isDebug bool) (*zap.Logger, error) {
+func newLogger(level string, isDebug bool) (*zap.Logger, error) {
 	var config zap.Config
 
 	if isDebug {
@@ -57,21 +57,16 @@ func New(level string, isDebug bool) (*zap.Logger, error) {
 	return config.Build()
 }
 
-func SetSentryHubOnContext(ctx context.Context) context.Context {
-	hub := sentry.CurrentHub().Clone()
-	return sentry.SetHubOnContext(ctx, hub)
-}
-
 func Debug(msg string, fields ...zap.Field) {
 	DefaultLogger().WithOptions(zap.AddCallerSkip(1)).Debug(msg, fields...)
 }
 
 func Info(msg string, fields ...zap.Field) {
-	info(msg, sentry.CurrentHub(), fields...)
+	info(msg, hub(), fields...)
 }
 
 func InfoWithContext(ctx context.Context, msg string, fields ...zap.Field) {
-	info(msg, sentry.GetHubFromContext(ctx), fields...)
+	info(msg, hubOnContext(ctx), fields...)
 }
 
 func info(msg string, hub *sentry.Hub, fields ...zap.Field) {
@@ -86,11 +81,11 @@ func info(msg string, hub *sentry.Hub, fields ...zap.Field) {
 }
 
 func Warn(msg string, fields ...zap.Field) {
-	warn(msg, sentry.CurrentHub(), fields...)
+	warn(msg, hub(), fields...)
 }
 
 func WarnWithContext(ctx context.Context, msg string, fields ...zap.Field) {
-	warn(msg, sentry.GetHubFromContext(ctx), fields...)
+	warn(msg, hubOnContext(ctx), fields...)
 }
 
 func warn(msg string, hub *sentry.Hub, fields ...zap.Field) {
@@ -105,11 +100,11 @@ func warn(msg string, hub *sentry.Hub, fields ...zap.Field) {
 }
 
 func Error(msg string, fields ...zap.Field) {
-	err(msg, sentry.CurrentHub(), fields...)
+	err(msg, hub(), fields...)
 }
 
 func ErrorWithContext(ctx context.Context, msg string, fields ...zap.Field) {
-	err(msg, sentry.GetHubFromContext(ctx), fields...)
+	err(msg, hubOnContext(ctx), fields...)
 }
 
 func err(msg string, hub *sentry.Hub, fields ...zap.Field) {
@@ -121,6 +116,8 @@ func err(msg string, hub *sentry.Hub, fields ...zap.Field) {
 		Level:   sentry.LevelError,
 		Data:    zapFieldsToMap(fields),
 	})
+
+	captureMessage(msg, hub)
 }
 
 func addBreadcrumb(hub *sentry.Hub, breadcrumb *sentry.Breadcrumb) {
@@ -128,6 +125,14 @@ func addBreadcrumb(hub *sentry.Hub, breadcrumb *sentry.Breadcrumb) {
 		hub.AddBreadcrumb(breadcrumb, nil)
 	} else {
 		sentry.AddBreadcrumb(breadcrumb)
+	}
+}
+
+func captureMessage(msg string, hub *sentry.Hub) {
+	if nil != hub {
+		hub.CaptureMessage(msg)
+	} else {
+		sentry.CaptureMessage(msg)
 	}
 }
 
@@ -153,6 +158,19 @@ func DefaultLogger() *zap.Logger {
 	}
 
 	return defaultLogger
+}
+
+func hubOnContext(ctx context.Context) *sentry.Hub {
+	hub := sentry.GetHubFromContext(ctx)
+	if hub == nil {
+		hub = sentry.CurrentHub().Clone()
+		sentry.SetHubOnContext(ctx, hub)
+	}
+	return hub
+}
+
+func hub() *sentry.Hub {
+	return sentry.CurrentHub()
 }
 
 // Convert zap fields to a map that Sentry can understand
