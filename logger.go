@@ -217,7 +217,7 @@ func hubOnContext(ctx context.Context) *sentry.Hub {
 
 // hub returns the current hub
 func hub() *sentry.Hub {
-	return sentry.CurrentHub()
+	return sentry.CurrentHub().Clone()
 }
 
 // zapFieldsToMap converts zap fields to a map that Sentry can understand
