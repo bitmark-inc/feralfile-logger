@@ -105,27 +105,27 @@ func lwarn(logger *zap.Logger, msg string, hub *sentry.Hub, fields ...zap.Field)
 }
 
 // Error logs a message at Error level.
-func Error(msg string, fields ...zap.Field) {
-	lerror(Logger(), msg, hub(), fields...)
+func Error(err error, fields ...zap.Field) {
+	lerror(Logger(), err, hub(), fields...)
 }
 
 // ErrorWithContext logs a message at Error level with a context.
-func ErrorWithContext(ctx context.Context, msg string, fields ...zap.Field) {
-	lerror(Logger(), msg, hubOnContext(ctx), fields...)
+func ErrorWithContext(ctx context.Context, err error, fields ...zap.Field) {
+	lerror(Logger(), err, hubOnContext(ctx), fields...)
 }
 
-func lerror(logger *zap.Logger, msg string, hub *sentry.Hub, fields ...zap.Field) {
-	logger.WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
+func lerror(logger *zap.Logger, err error, hub *sentry.Hub, fields ...zap.Field) {
+	logger.WithOptions(zap.AddCallerSkip(1)).Error(err.Error(), fields...)
 
 	// add a breadcrumb
 	addBreadcrumb(hub, &sentry.Breadcrumb{
-		Message: msg,
+		Message: err.Error(),
 		Level:   sentry.LevelError,
 		Data:    zapFieldsToMap(fields),
 	})
 
 	// capture message
-	captureMessage(msg, hub)
+	captureError(err, hub)
 }
 
 // Panic logs a message at Panic level.
@@ -146,8 +146,8 @@ func lpanic(logger *zap.Logger, msg string, hub *sentry.Hub, fields ...zap.Field
 		Data:    zapFieldsToMap(fields),
 	})
 
-	// capture message
-	captureMessage(msg, hub)
+	// capture event
+	captureEvent(msg, sentry.LevelFatal, hub)
 
 	// panic
 	logger.WithOptions(zap.AddCallerSkip(1)).Panic(msg, fields...)
@@ -171,8 +171,8 @@ func lfatal(logger *zap.Logger, msg string, hub *sentry.Hub, fields ...zap.Field
 		Data:    zapFieldsToMap(fields),
 	})
 
-	// capture message
-	captureMessage(msg, hub)
+	// capture event
+	captureEvent(msg, sentry.LevelFatal, hub)
 
 	logger.WithOptions(zap.AddCallerSkip(1)).Fatal(msg, fields...)
 }
@@ -196,13 +196,24 @@ func addBreadcrumb(hub *sentry.Hub, breadcrumb *sentry.Breadcrumb) {
 	}
 }
 
-// captureMessage captures a message to Sentry
-func captureMessage(msg string, hub *sentry.Hub) {
+// captureError captures an error to Sentry
+func captureError(err error, hub *sentry.Hub) {
 	if nil != hub {
-		hub.CaptureMessage(msg)
+		hub.CaptureException(err)
 	} else {
-		sentry.CaptureMessage(msg)
+		sentry.CaptureException(err)
 	}
+}
+
+// captureEvent captures an event to Sentry
+func captureEvent(msg string, level sentry.Level, hub *sentry.Hub) {
+	h := hub
+	if nil == h {
+		h = sentry.CurrentHub()
+	}
+
+	event := h.Client().EventFromMessage(msg, level)
+	h.CaptureEvent(event)
 }
 
 // hubOnContext returns a hub from the context, creating a new one if it doesn't exist

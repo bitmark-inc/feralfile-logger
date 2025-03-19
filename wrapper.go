@@ -51,8 +51,8 @@ func (l *cadenceWorkflowLogger) Warn(msg string, fields ...zap.Field) {
 	lwarn(l.logger, msg, hub(), l.attachInfo(fields...)...)
 }
 
-func (l *cadenceWorkflowLogger) Error(msg string, fields ...zap.Field) {
-	lerror(l.logger, msg, hub(), l.attachInfo(fields...)...)
+func (l *cadenceWorkflowLogger) Error(err error, fields ...zap.Field) {
+	lerror(l.logger, err, hub(), l.attachInfo(fields...)...)
 }
 
 type cadenceActivityLogger struct {
@@ -92,6 +92,6 @@ func (l *cadenceActivityLogger) Warn(msg string, fields ...zap.Field) {
 	lwarn(l.logger, msg, hubOnContext(l.ctx), l.attachInfo(fields...)...)
 }
 
-func (l *cadenceActivityLogger) Error(msg string, fields ...zap.Field) {
-	lerror(l.logger, msg, hubOnContext(l.ctx), l.attachInfo(fields...)...)
+func (l *cadenceActivityLogger) Error(err error, fields ...zap.Field) {
+	lerror(l.logger, err, hubOnContext(l.ctx), l.attachInfo(fields...)...)
 }
