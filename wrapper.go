@@ -81,17 +81,17 @@ func (l *cadenceActivityLogger) attachInfo(fields ...zap.Field) []zap.Field {
 }
 
 func (l *cadenceActivityLogger) Debug(msg string, fields ...zap.Field) {
-	ldebug(l.logger, msg, hub(), l.attachInfo(fields...)...)
+	ldebug(l.logger, msg, hubOnContext(l.ctx), l.attachInfo(fields...)...)
 }
 
 func (l *cadenceActivityLogger) Info(msg string, fields ...zap.Field) {
-	linfo(l.logger, msg, hub(), l.attachInfo(fields...)...)
+	linfo(l.logger, msg, hubOnContext(l.ctx), l.attachInfo(fields...)...)
 }
 
 func (l *cadenceActivityLogger) Warn(msg string, fields ...zap.Field) {
-	lwarn(l.logger, msg, hub(), l.attachInfo(fields...)...)
+	lwarn(l.logger, msg, hubOnContext(l.ctx), l.attachInfo(fields...)...)
 }
 
 func (l *cadenceActivityLogger) Error(msg string, fields ...zap.Field) {
-	lerror(l.logger, msg, hub(), l.attachInfo(fields...)...)
+	lerror(l.logger, msg, hubOnContext(l.ctx), l.attachInfo(fields...)...)
 }
